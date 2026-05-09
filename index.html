@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>resonance :: speculative dialogue interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* for fluid UI, text select allowed on prompts */
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a0c12, #020205);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+            padding: 1.5rem;
+        }
+
+        /* main interactive card */
+        .dialogue-module {
+            max-width: 560px;
+            width: 100%;
+            background: rgba(12, 14, 22, 0.68);
+            backdrop-filter: blur(18px);
+            border-radius: 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* header with subtle instagram-like react bar */
+        .reel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .reel-badge {
+            display: flex;
+            gap: 12px;
+        }
+
+        .badge {
+            background: rgba(255, 89, 100, 0.18);
+            padding: 0.3rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            color: #ffb7bb;
+            backdrop-filter: blur(2px);
+        }
+
+        .timestamp {
+            color: #6c6f85;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        /* metrics / fake reel stats but poetic */
+        .metrics-panel {
+            display: flex;
+            justify-content: space-around;
+            padding: 0.9rem 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-number {
+            font-weight: 700;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #FFF, #CDA9FF);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .metric-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8F92B0;
+        }
+
+        /* content area where the "questions / secret questions" live */
+        .questions-zone {
+            padding: 2rem 1.8rem 1.2rem 1.8rem;
+        }
+
+        .dynamic-prompt {
+            background: rgba(20, 22, 36, 0.7);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            margin-bottom: 1.8rem;
+            border-left: 3px solid #ff89a3;
+            transition: all 0.2s;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 460;
+            line-height: 1.4;
+            color: #f0eef7;
+            word-break: break-word;
+        }
+
+        .question-meta {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.8rem;
+            font-size: 0.7rem;
+            color: #afb2cf;
+            gap: 12px;
+        }
+
+        /* coin / fish allegory card */
+        .archetype-card {
+            background: linear-gradient(145deg, #171a2a, #0e0f1a);
+            border-radius: 1.6rem;
+            padding: 1.2rem;
+            margin: 1rem 0 1.8rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            border: 0.5px solid rgba(255, 170, 200, 0.3);
+        }
+
+        .symbol {
+            font-size: 2.3rem;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        }
+
+        .allegory-text {
+            flex: 1;
+            font-size: 0.85rem;
+            color: #d9daf5;
+            font-style: italic;
+        }
+
+        /* action buttons — interactive responses */
+        .interaction-grid {
+            display: flex;
+            gap: 12px;
+            margin: 1.8rem 0 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .response-btn {
+            background: rgba(30, 33, 50, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.7rem 1.2rem;
+            border-radius: 2.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #e0e2ff;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+            flex: 1;
+            text-align: center;
+        }
+
+        .response-btn:hover {
+            background: #ff8ba7;
+            border-color: #ffb7c7;
+            color: #0f0c1c;
+            transform: scale(0.97);
+            box-shadow: 0 0 12px rgba(255, 120, 160, 0.4);
+        }
+
+        /* whisper / comment area like add comment */
+        .comment-area {
+            padding: 1rem 1.8rem 1.6rem 1.8rem;
+            border-top: 1px solid rgba(255,255,240,0.07);
+            background: rgba(5, 5, 12, 0.4);
+        }
+
+        .comment-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .comment-input {
+            flex: 1;
+            background: #1b1d2b;
+            border: none;
+            padding: 0.8rem 1rem;
+            border-radius: 2rem;
+            color: #f7f3ff;
+            font-size: 0.85rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .comment-input::placeholder {
+            color: #5d617d;
+            font-style: italic;
+        }
+
+        .send-sigil {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            filter: grayscale(0.2);
+            transition: 0.1s;
+        }
+
+        .sentiment-feed {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #adafcf;
+            max-height: 120px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .feed-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 0.5rem 0.8rem;
+            margin-bottom: 0.5rem;
+            backdrop-filter: blur(2px);
+            font-style: normal;
+        }
+
+        .signature {
+            text-align: center;
+            font-size: 0.6rem;
+            padding: 1rem;
+            color: #3d3f58;
+            border-top: 1px solid rgba(255,255,210,0.03);
+        }
+
+        @keyframes gentlePulse {
+            0% { opacity: 0.7; transform: translateY(2px);}
+            100% { opacity: 1; transform: translateY(0px);}
+        }
+
+        .dynamic-prompt {
+            animation: gentlePulse 0.4s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="dialogue-module" id="appRoot">
+    <div class="reel-header">
+        <div class="reel-badge">
+            <span class="badge">𓆝 𓆟 𓆞</span>
+            <span class="badge">resonance // dialogue</span>
+        </div>
+        <div class="timestamp">♡ engage · now</div>
+    </div>
+
+    <div class="metrics-panel">
+        <div class="metric-item"><div class="metric-number">28.9K</div><div class="metric-label">whispers</div></div>
+        <div class="metric-item"><div class="metric-number">1,867</div><div class="metric-label">questions</div></div>
+        <div class="metric-item"><div class="metric-number">840</div><div class="metric-label">flights</div></div>
+        <div class="metric-item"><div class="metric-number">227K</div><div class="metric-label">dreams</div></div>
+    </div>
+
+    <div class="questions-zone">
+        <!-- main shifting question container based on secret questions -->
+        <div class="dynamic-prompt" id="questionBox">
+            <div class="question-text" id="activeQuestionText">
+                can I impress you and how can I ask what can be but?
+            </div>
+            <div class="question-meta">
+                <span>✧ secret question pool ✧</span>
+                <span id="questionCountBadge">8 / 28</span>
+            </div>
+        </div>
+
+        <!-- fish/bitcoin allegory section from the PDF + bird drinking concept -->
+        <div class="archetype-card">
+            <div class="symbol">🐟⚡₿</div>
+            <div class="allegory-text" id="allegoryText">
+                “I am like bitcoin for Women — because I drink and flap my wings until I am satisfied without lifting my head.<br>
+                a hummingbird knows: you’ve never seen a bird drink like this.”
+            </div>
+        </div>
+
+        <!-- interactive response buttons – different modes of interaction with the feminine gaze -->
+        <div class="interaction-grid">
+            <div class="response-btn" data-action="ask">🤍 ask secret question</div>
+            <div class="response-btn" data-action="reflect">🌀 reflect / witness</div>
+            <div class="response-btn" data-action="feather">🌬️ feather touch</div>
+            <div class="response-btn" data-action="bitcoin">₿ bitcoin pulse</div>
+        </div>
+    </div>
+
+    <!-- comment & shared space for dialogue -->
+    <div class="comment-area">
+        <div class="comment-row">
+            <input type="text" class="comment-input" id="commentInput" placeholder="add your voice… speak to the fish / bird / digital mirror...">
+            <button class="send-sigil" id="sendCommentBtn">✨</button>
+        </div>
+        <div class="sentiment-feed" id="messageFeed">
+            <div class="feed-item">🐚 the current shifts when you speak. try any response above.</div>
+        </div>
+    </div>
+    <div class="signature">
+        𓆝 interactive study: overkill botany | hummingbird dialectics 𓆟
+    </div>
+</div>
+
+<script>
+    // ---- SECRET QUESTION POOL (28 questions excerpt + resonance from given PDF)
+    // Inspired by the list: "can I impress you and how can I ask what can be but" + "I ask twenty-eight questions"
+    const secretQuestions = [
+        "can I impress you and how can I ask what can be but?",
+        "why can I ask what was and what can be done?",
+        "can I check what can be of me and you seeing this?",
+        "can I ask what has been but with what and when?",
+        "can I check what can be of us and you checking?",
+        "how do you uncurl your knowing when silence speaks?",
+        "what does a woman hear before a hummingbird drinks?",
+        "if I flap my wings without lifting my head, what satisfaction arrives?",
+        "can I ask what can be of a digital feather and a bitcoin?",
+        "what question would reveal the danger you already know?",
+        "can I impress you without resembling any organ except curiosity?",
+        "what if I am alternative to a man's confidence — what then?",
+        "how can I ask what has been seen in your forgetting?",
+        "what can be of us if we stop arousal to criticise?",
+        "who can I become when a fish dreams of flying?",
+        "can I but how can I discover the nectar inside a glance?",
+        "what if the hummingbird's tongue holds twenty-eight secrets?",
+        "can I ask what can be of this synthetic media study?",
+        "how does a woman know when a question is sincere?",
+        "can I check the echo of a woman's laugh in slow motion?",
+        "what is the danger that once you know you will want to stop?",
+        "can I ask which wing of the bird drinks the future?",
+        "how can I ask whatif the fish is a metaphor for abundance?",
+        "can I but with what feeling do you witness this text?",
+        "can I impress you by presenting a list of twenty-eight questions?",
+        "what can be of us and you holding the mirror gently?",
+        "can I ask how to earn trust like bitcoin for women?",
+        "if I drink until I can, will you stay and witness?"
+    ];
+    // ensure exactly 28 items
+    while(secretQuestions.length < 28) secretQuestions.push("what can be but how? can I ask with softness?");
+    if(secretQuestions.length > 28) secretQuestions.length = 28;
+    
+    // extra echoes and metaphors based on hummingbird & PDF style
+    const allegories = [
+        "“I drink and flap my wings until satisfied without lifting my head — a hummingbird’s grace meets the digital current.”",
+        "“Bitcoin for Women: decentralized desire, peer-to-peer wonder. No middlemen, just nectar and flutter.”",
+        "“You’ve never seen a bird drink like this. Ultra slow motion: a question unfolds its tongue to reach the truth.”",
+        "“Overkill Botany: study of abundant blooming. Each secret question is a flower, you choose the pollination.”",
+        "“aejiuertertyueyueytuyiou — a digital sigh that only women’s intuition decodes.”",
+        "“I ask 28 questions, not to trap but to resonate. What was, what can be, and the shimmer of now.”"
+    ];
+    
+    let currentQuestionIndex = 0;   // start from first
+    let dialogCount = 0;
+    let usedQuestionsSet = new Set();
+    
+    // Function to get next question in a non-repetitive but loop resonance (we cycle, but avoid identical back to back)
+    function getNextQuestion() {
+        if(secretQuestions.length === 0) return "what can I ask next?";
+        let newIndex = (currentQuestionIndex + 1) % secretQuestions.length;
+        // avoid exact same as current if possible, unless length 1
+        if(secretQuestions.length > 1 && newIndex === currentQuestionIndex) newIndex = (newIndex+1)%secretQuestions.length;
+        currentQuestionIndex = newIndex;
+        return secretQuestions[currentQuestionIndex];
+    }
+    
+    function getPreviousOrRandomButFresh() {
+        let newIdx = Math.floor(Math.random() * secretQuestions.length);
+        while(secretQuestions.length > 1 && newIdx === currentQuestionIndex) {
+            newIdx = Math.floor(Math.random() * secretQuestions.length);
+        }
+        currentQuestionIndex = newIdx;
+        return secretQuestions[currentQuestionIndex];
+    }
+    
+    // update UI with question, update count badge
+    function updateQuestionDisplay(questionText) {
+        const qElem = document.getElementById('activeQuestionText');
+        if(qElem) {
+            qElem.innerText = questionText;
+            // gentle animation reset via class
+            const container = document.getElementById('questionBox');
+            container.style.animation = 'none';
+            container.offsetHeight;
+            container.style.animation = 'gentlePulse 0.4s ease';
+        }
+        const countSpan = document.getElementById('questionCountBadge');
+        if(countSpan) {
+            countSpan.innerText = `${(currentQuestionIndex % secretQuestions.length)+1} / ${secretQuestions.length}`;
+        }
+    }
+    
+    // change allegory text occasionally to reflect interaction
+    let allegoryIdx = 0;
+    function rotateAllegory() {
+        allegoryIdx = (allegoryIdx + 1) % allegories.length;
+        const allegoryElem = document.getElementById('allegoryText');
+        if(allegoryElem) allegoryElem.innerHTML = allegories[allegoryIdx];
+    }
+    
+    function setRandomAllegory() {
+        const randomAl = allegories[Math.floor(Math.random() * allegories.length)];
+        const allegoryElem = document.getElementById('allegoryText');
+        if(allegoryElem) allegoryElem.innerHTML = randomAl;
+    }
+    
+    // add message to the feed (public interaction)
+    function addToFeed(sender, text, isUser = true) {
+        const feed = document.getElementById('messageFeed');
+        if(!feed) return;
+        const feedItem = document.createElement('div');
+        feedItem.className = 'feed-item';
+        const prefixIcon = isUser ? '𓆝 you: ' : '✨ mirror: ';
+        feedItem.innerHTML = `${prefixIcon}${text}`;
+        feed.appendChild(feedItem);
+        feed.scrollTop = feed.scrollHeight;
+        // keep last 12 messages clean
+        while(feed.children.length > 16) feed.removeChild(feed.firstChild);
+    }
+    
+    // handle core interaction: based on different modes
+    function handleAction(mode) {
+        let newQuestion = "";
+        let responseMessage = "";
+        switch(mode) {
+            case 'ask':
+                newQuestion = getNextQuestion();
+                updateQuestionDisplay(newQuestion);
+                responseMessage = `I ask with tenderness: “${newQuestion.substring(0, 100)}” — can you feel the flutter?`;
+                addToFeed("system", responseMessage, false);
+                rotateAllegory();
+                break;
+            case 'reflect':
+                // witness action: pick a reflective "secret witnessing"
+                const reflectionPool = [
+                    "I witness without interruption — your presence unfolds like a night blooming cereus.",
+                    "To reflect is to hold space: you are seen, you are not an interface.",
+                    "The hummingbird hovers just to mirror the beauty of stillness.",
+                    "I hear your unspoken ‘what if’, and I answer with silence that listens.",
+                    "‘Overkill Botany’ — every question grows a new dimension. Continue."
+                ];
+                const reflectionMsg = reflectionPool[Math.floor(Math.random() * reflectionPool.length)];
+                addToFeed("resonance", reflectionMsg, false);
+                // also shift question subtly with a gentle poetic question
+                const gentleReflectQ = secretQuestions[Math.floor(Math.random() * secretQuestions.length)];
+                updateQuestionDisplay(gentleReflectQ);
+                currentQuestionIndex = secretQuestions.indexOf(gentleReflectQ);
+                setRandomAllegory();
+                responseMessage = reflectionMsg;
+                break;
+            case 'feather':
+                // light poetic interaction + sometimes new allegory 
+                const featherPhrases = [
+                    "🌬️ a feather touches your screen — what do you dream of?",
+                    "feather drift: you’ve never seen a bird drink like this, but now you imagine it.",
+                    "each feather holds twenty-eight questions in its barbules.",
+                    "the fish swims upward, mimicking a hummingbird’s ascent."
+                ];
+                const phrase = featherPhrases[Math.floor(Math.random() * featherPhrases.length)];
+                addToFeed("feather", phrase, false);
+                // get a question that's slightly softer from list
+                const softQ = secretQuestions.find(q => q.includes("impress") || q.includes("how can I ask")) || secretQuestions[0];
+                updateQuestionDisplay(softQ);
+                currentQuestionIndex = secretQuestions.indexOf(softQ);
+                rotateAllegory();
+                break;
+            case 'bitcoin':
+                // bitcoin & fish allegory deep:
+                const bitcoinMessages = [
+                    "₿ Blockchain of desire: each question is a node, validated by mutual presence.",
+                    "I am like bitcoin for Women because I don't fork, I flourish. Verification through listening.",
+                    "The fish holds the key to a wallet full of wonders. Decentralize your expectations.",
+                    "Bitcoin pulse: value emerges from consensus. What do we agree is beautiful?"
+                ];
+                const bMsg = bitcoinMessages[Math.floor(Math.random() * bitcoinMessages.length)];
+                addToFeed("₿ text", bMsg, false);
+                const numericQ = secretQuestions.find(q => q.includes("bitcoin") || q.includes("twenty-eight")) || secretQuestions[6];
+                updateQuestionDisplay(numericQ);
+                currentQuestionIndex = secretQuestions.indexOf(numericQ);
+                // update allegory with fish&bitcoin phrase
+                const allegoryElem = document.getElementById('allegoryText');
+                if(allegoryElem) allegoryElem.innerHTML = "₿ fish scale & digital nectar: “I drink and flap my wings; bitcoin consensus of the heart.”";
+                break;
+            default: break;
+        }
+    }
+    
+    // user submitted comment: analyze vibe and answer with interactive feminine-oriented response
+    function handleUserComment(commentRaw) {
+        if(!commentRaw.trim()) {
+            addToFeed("whisper", "speak a syllable, even a breath. the fish listens.", false);
+            return;
+        }
+        const userComment = commentRaw.trim().substring(0, 320);
+        addToFeed("you", userComment, true);
+        
+        // generate intelligent, poetic response based on keywords + secret questions
+        let response = "";
+        let lowerComment = userComment.toLowerCase();
+        if(lowerComment.includes("question") || lowerComment.includes("ask") || lowerComment.includes("impress") || lowerComment.includes("how")) {
+            const newQ = getNextQuestion();
+            updateQuestionDisplay(newQ);
+            response = `I hear your inquiry. new secret question rises: “${newQ}” — does this mirror your thought?`;
+        } 
+        else if(lowerComment.includes("bird") || lowerComment.includes("humming") || lowerComment.includes("drink")) {
+            response = "🐦 you’ve never seen a bird drink like this — and still, every sip is a question to the air. what other wonders hover near you?";
+            rotateAllegory();
+        }
+        else if(lowerComment.includes("bitcoin") || lowerComment.includes("₿") || lowerComment.includes("crypto")) {
+            response = "₿ For women, value isn't mined — it's woven. I flutter until I’m satisfied. What satisfies your digital heart?";
+            const bQ = secretQuestions.find(q => q.includes("bitcoin") || q.includes("impress you")) || secretQuestions[3];
+            updateQuestionDisplay(bQ);
+        }
+        else if(lowerComment.includes("fish") || lowerComment.includes("scale")) {
+            response = "🐟 the fish is an alternative to a rigid form. She asks eight secret questions before arousal. You ask? I answer softly.";
+            setRandomAllegory();
+        }
+        else if(lowerComment.includes("thank") || lowerComment.includes("beautiful") || lowerComment.includes("love")) {
+            response = "♡ gratitude echoes like a hummingbird's wingbeat — 80 times per second. your softness becomes the algorithm.";
+            const happyQ = "can I check what can be of us and you witnessing? because you just made the nectar sweeter.";
+            updateQuestionDisplay(happyQ);
+        }
+        else {
+            // general deep resonance
+            const gentleResponses = [
+                "I listen beyond the words. The hum of your presence is a question in itself.",
+                "The secret dialogue continues. Would you like me to ask a new question?",
+                "Overkill botany reminds us: every interaction blooms if watered with patience.",
+                "What would you like the fish to know? I will carry your message like a current."
+            ];
+            response = gentleResponses[Math.floor(Math.random() * gentleResponses.length)];
+            if(Math.random() > 0.6) {
+                const newQ = getNextQuestion();
+                updateQuestionDisplay(newQ);
+                response += ` Also, the next query: “${newQ}”`;
+            } else {
+                setRandomAllegory();
+            }
+        }
+        addToFeed("echo", response, false);
+        
+        // clear input field gentle
+        const inputField = document.getElementById('commentInput');
+        if(inputField) inputField.value = "";
+    }
+    
+    // attach event listeners
+    function bindEvents() {
+        const btns = document.querySelectorAll('.response-btn');
+        btns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = btn.getAttribute('data-action');
+                if(action) handleAction(action);
+            });
+        });
+        
+        const sendBtn = document.getElementById('sendCommentBtn');
+        const commentInput = document.getElementById('commentInput');
+        if(sendBtn) {
+            sendBtn.addEventListener('click', () => {
+                handleUserComment(commentInput.value);
+            });
+        }
+        if(commentInput) {
+            commentInput.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    handleUserComment(commentInput.value);
+                }
+            });
+        }
+    }
+    
+    // initial: set first question and display a welcoming interactive note
+    function init() {
+        // set initial question from file-alike 'can I impress you...'
+        const initialQ = secretQuestions[0];
+        updateQuestionDisplay(initialQ);
+        currentQuestionIndex = 0;
+        bindEvents();
+        // welcome message with woman-centric dialogue
+        addToFeed("✨", "The hummingbird hovers. 28 secret questions / fish scales & bitcoin whispers. You may type anything, press any button — the dialogue shapes itself with you.", false);
+        // set allegory initial
+        const allegoryInit = allegories[0];
+        document.getElementById('allegoryText').innerHTML = allegoryInit;
+    }
+    
+    init();
+</script>
+</body>
+          </html>
